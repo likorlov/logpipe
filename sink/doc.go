@@ -2,10 +2,16 @@
 //
 // Available sinks:
 //
-//   - ConsoleSink  – writes human-readable or JSON output to stdout/stderr.
-//   - FileSink     – appends JSON-line entries to a single file.
-//   - RotatingFileSink – like FileSink but rotates the file once it exceeds
-//     a configurable size limit, renaming the old file with a timestamp suffix.
+//   - ConsoleSink  – writes structured or pretty-printed log entries to an
+//     io.Writer (e.g. os.Stdout).
+//
+//   - FileSink – appends JSON-encoded log entries to a file on disk.
+//
+//   - RotatingFileSink – like FileSink but rotates the output file once it
+//     exceeds a configurable size limit.
+//
+//   - WebhookSink – POSTs each log entry as a JSON payload to an HTTP
+//     endpoint, useful for forwarding logs to external services.
 //
 // All sinks implement the logpipe.Sink interface:
 //
@@ -14,10 +20,6 @@
 //	    Close() error
 //	}
 //
-// Example – write to a rotating file:
-//
-//	s, err := sink.NewRotatingFileSink("/var/log/myapp.log", 50*1024*1024)
-//	if err != nil { log.Fatal(err) }
-//	logger := logpipe.New(logpipe.LevelInfo, s)
-//	defer logger.Close()
+// Sinks can be composed via logpipe.New to fan-out entries to multiple
+// destinations simultaneously.
 package sink
