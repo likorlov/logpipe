@@ -11,7 +11,7 @@ import (
 )
 
 type recordSink struct {
-	entries []logpipe.Entry
+	entries  []logpipe.Entry
 	failWith error
 }
 
@@ -19,7 +19,8 @@ func (r *recordSink) Write(e logpipe.Entry) error {
 	if r.failWith != nil {
 		return r.failWith
 	}
-	r.entries = append(r.entries,
+	r.entries = append(r.entries, e)
+	return nil
 }
 func (r *recordSink) Close() error { return nil }
 
@@ -67,6 +68,31 @@ func TestAsyncSink_ErrFuncCalled(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	if atomic.LoadInt64(&count) == 0 {
 		t.Fatal("expected ErrFunc to be called")
+	}
+}
+
+// TestAsyncSink_MultipleEntries verifies that all entries written before Close
+// are delivered to the underlying sink in order.
+func TestAsyncSink_MultipleEntries(t *testing.T) {
+	rec := &recordSink{}
+	as := sink.NewAsyncSink(rec, 32)
+
+	msgs := []string{"one", "two", "three", "four", "five"}
+	for _, m := range msgs {
+		if err := as.Write(logpipe.Entry{Message: m}); err != nil {
+			t.Fatalf("unexpected write error: %v", err)
+		}
+	}
+	if err := as.Close(); err != nil {
+		t.Fatalf("unexpected close error: %v", err)
+	}
+	if len(rec.entries) != len(msgs) {
+		t.Fatalf("expected %d entries, got %d", len(msgs), len(rec.entries))
+	}
+	for i, e := range rec.entries {
+		if e.Message != msgs[i] {
+			t.Errorf("entry %d: expected %q, got %q", i, msgs[i], e.Message)
+		}
 	}
 }
 
