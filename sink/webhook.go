@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -50,7 +51,9 @@ func (w *WebhookSink) Write(e logpipe.Entry) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("webhook: unexpected status %d", resp.StatusCode)
+		// Read a snippet of the response body to aid debugging.
+		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+		return fmt.Errorf("webhook: unexpected status %d: %s", resp.StatusCode, bytes.TrimSpace(snippet))
 	}
 	return nil
 }
