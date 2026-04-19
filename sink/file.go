@@ -36,7 +36,10 @@ func (s *FileSink) Write(entry logpipe.Entry) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	_, err = s.f.Write(data)
-	return err
+	if err != nil {
+		return fmt.Errorf("filesink: write to %q: %w", s.path, err)
+	}
+	return nil
 }
 
 // Close flushes and closes the underlying file.
@@ -44,9 +47,12 @@ func (s *FileSink) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.f.Sync(); err != nil {
-		return err
+		return fmt.Errorf("filesink: sync %q: %w", s.path, err)
 	}
-	return s.f.Close()
+	if err := s.f.Close(); err != nil {
+		return fmt.Errorf("filesink: close %q: %w", s.path, err)
+	}
+	return nil
 }
 
 // Path returns the file path this sink writes to.
