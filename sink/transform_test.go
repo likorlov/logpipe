@@ -64,3 +64,22 @@ func TestTransformSink_Close(t *testing.T) {
 		t.Error("expected underlying sink to be closed")
 	}
 }
+
+func TestTransformSink_OriginalEntryUnmodified(t *testing.T) {
+	cap := &captureSink{}
+	ts := sink.NewTransformSink(cap, func(e logpipe.Entry) (logpipe.Entry, bool) {
+		e.Message = "modified"
+		return e, true
+	})
+
+	original := logpipe.Entry{Level: logpipe.INFO, Message: "original", Time: time.Now(), Fields: map[string]interface{}{}}
+	if err := ts.Write(original); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if original.Message != "original" {
+		t.Errorf("transform mutated the original entry, message is now %q", original.Message)
+	}
+	if cap.entries[0].Message != "modified" {
+		t.Errorf("expected transformed message %q, got %q", "modified", cap.entries[0].Message)
+	}
+}
