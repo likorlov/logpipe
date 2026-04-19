@@ -57,3 +57,16 @@ func FieldFilter(key string) FilterFunc {
 		return ok
 	}
 }
+
+// AndFilter returns a FilterFunc that passes only entries that satisfy all
+// of the provided predicates. If no predicates are given, all entries pass.
+func AndFilter(filters ...FilterFunc) FilterFunc {
+	return func(entry logpipe.Entry) bool {
+		for _, f := range filters {
+			if !f(entry) {
+				return false
+			}
+		}
+		return true
+	}
+}
