@@ -57,3 +57,26 @@ func (s *FileSink) Close() error {
 
 // Path returns the file path this sink writes to.
 func (s *FileSink) Path() string { return s.path }
+
+// Rotate closes the current file, renames it to path+".old", and opens a
+// fresh file at the original path. It is safe to call concurrently with Write.
+func (s *FileSink) Rotate() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.f.Sync(); err != nil {
+		return fmt.Errorf("filesink: rotate sync %q: %w", s.path, err)
+	}
+	if err := s.f.Close(); err != nil {
+		return fmt.Errorf("filesink: rotate close %q: %w", s.path, err)
+	}
+	if err := os.Rename(s.path, s.path+".old"); err != nil {
+		return fmt.Errorf("filesink: rotate rename %q: %w", s.path, err)
+	}
+	f, err := os.OpenFile(s.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("filesink: rotate open %q: %w", s.path, err)
+	}
+	s.f = f
+	return nil
+}
